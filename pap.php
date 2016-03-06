@@ -249,5 +249,13 @@ foreach($schemas_to_dump as $schema_to_dump)
     create_schema_svg($dbname, $schema_to_dump, $format);
 }
 
+echo "clanup\n";
+
+system('rm -rf '.$dbname.'*.dot');
+system('rm -rf '.$dbname.'*.dia');
+system('rm -rf '.$dbname.'*.html');
+system('rm -rf '.$dbname.'*.neato');
+system('rm -rf '.$dbname.'*.xml');
+
 echo "done\n";
 
