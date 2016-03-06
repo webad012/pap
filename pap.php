@@ -6,13 +6,17 @@ function exit_usage()
         ."\t-h host - default localhost\n"
         ."\t-p port - default 5432\n"
         ."\t-u username - default postgres\n"
+        ."\t-f format - default svg, supported formats: \n"
+        ."\t\tcanon cmap cmapx cmapx_np dot eps fig gd gd2 gif gv imap imap_np ismap\n"
+        ."\t\tjpe jpeg jpg pdf pic plain plain-ext png pov ps ps2 svg svgz tk\n"
+        ."\t\tvml vmlz vrml wbmp x11 xdot xdot1.2 xdot1.4 xlib\n"
         ."\t-d dbname\n"
         ."\t-s schema - or -a\n"
         ."\t-a all schemas - or -s\n";
     exit($message);
 }
 
-function create_schema_svg($dbname, $schema)
+function create_schema_svg($dbname, $schema, $output_format)
 {
     echo "parsing schema '$schema'\n";
     
@@ -157,12 +161,12 @@ function create_schema_svg($dbname, $schema)
     fclose($handle_read);
     fclose($handle_write);
     
-    $images_dir = 'images';
-    if (!file_exists($images_dir)) {
-        mkdir($images_dir, 0777, true);
+    $output_dir = 'output';
+    if (!file_exists($output_dir)) {
+        mkdir($output_dir, 0777, true);
     }
 
-    $svg_command = 'dot -Tsvg -o '.$images_dir.'/output_'.$dbname.'_'.$schema.'.svg '.$output_file;
+    $svg_command = 'dot -T'.$output_format.' -o '.$output_dir.'/output_'.$dbname.'_'.$schema.'.'.$output_format.' '.$output_file;
     system($svg_command);
 }
 
@@ -171,10 +175,11 @@ $host = 'localhost';
 $port = 5432;
 $username = 'postgres';
 $all_schemas = false;
+$format = 'svg';
 
 echo "parsing input\n";
 
-$options = getopt("h:p:d:u:s:ap:");
+$options = getopt("h:p:d:u:s:ap:f:");
 
 if(!isset($options['d']))
 {
@@ -203,6 +208,10 @@ if(isset($options['s']))
 if(isset($options['a']))
 {
     $all_schemas = true;
+}
+if(isset($options['f']))
+{
+    $format = $options['f'];
 }
 $dbname = $options['d'];
 
@@ -237,7 +246,7 @@ else
 
 foreach($schemas_to_dump as $schema_to_dump)
 {
-    create_schema_svg($dbname, $schema_to_dump);
+    create_schema_svg($dbname, $schema_to_dump, $format);
 }
 
 echo "done\n";
