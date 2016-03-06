@@ -1,15 +1,5 @@
 <?php
 
-/**
- * prereq: postgresql_autodoc
- * 
- * input: 
- * -h host - default localhost
- * -p port - default 5432
- * -d dbname
- * -s schema
- */
-
 function exit_usage()
 {
     $message = "invalid arguments:\n"
