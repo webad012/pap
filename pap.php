@@ -27,16 +27,15 @@ function create_schema_svg($dbname, $schema, $output_format)
 
     $handle_read = fopen($file_to_parse, "r") or die("Unable to open file to read!");
 
-    $handle_write = fopen($output_file, "w") or die("Unable to open file to write!");
-
     $started_schemas = false;
     $finished_tables = false;
     $previous_line = null;
-
-    $table_template = '"{SCHEMA_NAME}" [shape = plaintext, label = < <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0"> <TR ><TD PORT="ltcol0"> </TD> <TD bgcolor="DarkSeaGreen" border="1" COLSPAN="4"> \N </TD> <TD PORT="rtcol0"></TD></TR>  <TR><TD PORT="ltcol1" ></TD><TD align="left" > id </TD><TD align="left" > virt </TD><TD align="left" > col </TD><TD align="left" >  </TD><TD align="left" PORT="rtcol1"> </TD></TR> </TABLE>> ];';
+    
+    $pre_tables_lines = [];
 
     $schema_table_macros_used = [];
 
+    $this_schema_tables_to_print = [];
     $connectors_to_use = [];
 
     while (($line = fgets($handle_read)) !== false) 
@@ -49,7 +48,7 @@ function create_schema_svg($dbname, $schema, $output_format)
             }
             else
             {
-                fwrite($handle_write, $line);
+                $pre_tables_lines[] = $line;
             }
         }
 
@@ -59,11 +58,11 @@ function create_schema_svg($dbname, $schema, $output_format)
             {
                 if(!empty($line) && substr($line, 0, strlen($schema_line_starting_part)) === $schema_line_starting_part)
                 {
-                    fwrite($handle_write, $line);
+                    $this_schema_tables_to_print[] =  $line;
                 }
                 else if($previous_line === $line)
                 {
-                    fwrite($handle_write, $line);
+                    $this_schema_tables_to_print[] =  $line;
 
                     if($finished_tables === false)
                     {
@@ -118,9 +117,6 @@ function create_schema_svg($dbname, $schema, $output_format)
                         if(!in_array($to_schema, $schema_table_macros_used))
                         {
                             $schema_table_macros_used[] = $to_schema;
-
-                            $used_macro = str_replace('{SCHEMA_NAME}', $to_schema, $table_template);
-                            fwrite($handle_write, $used_macro."\n");
                         }
 
                         $used_connector = preg_replace('/'.$to_match.'":ltcol\d+/', $to_schema.'":ltcol1', $line);
@@ -135,9 +131,6 @@ function create_schema_svg($dbname, $schema, $output_format)
                         if(!in_array($from_schema, $schema_table_macros_used))
                         {
                             $schema_table_macros_used[] = $from_schema;
-
-                            $used_macro = str_replace('{SCHEMA_NAME}', $from_schema, $table_template);
-                            fwrite($handle_write, $used_macro."\n");
                         }
                         $used_connector = preg_replace('/'.$from_match.'":rtcol\d+/', $from_schema.'":rtcol1', $line);
                         $connectors_to_use[] = $used_connector;
@@ -149,11 +142,42 @@ function create_schema_svg($dbname, $schema, $output_format)
         $previous_line = $line;
     }
 
-    fwrite($handle_write, "\n\n");
+    $handle_write = fopen($output_file, "w") or die("Unable to open file to write!");
+    
+    foreach($pre_tables_lines as $pre_tables_line)
+    {
+        fwrite($handle_write, $pre_tables_line);
+    }
+    
+    $table_template = '"{SCHEMA_NAME}" [shape = plaintext, label = < '
+            . '<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0"> '
+                . '<TR >'
+                    . '<TD PORT="ltcol0"> </TD> '
+                    . '<TD bgcolor="DarkSeaGreen" border="1" COLSPAN="4"> \N </TD> '
+                    . '<TD PORT="rtcol0"></TD></TR>  '
+                . '<TR>'
+                    . '<TD PORT="ltcol1" ></TD>'
+                    . '<TD align="left" > id </TD>'
+                    . '<TD align="left" > virt </TD>'
+                    . '<TD align="left" > col </TD>'
+                    . '<TD align="left" >  </TD>'
+                    . '<TD align="left" PORT="rtcol1"> </TD>'
+                . '</TR> '
+            . '</TABLE>> ];';
+    foreach($schema_table_macros_used as $schema_table_macro_used)
+    {
+        $used_macro = str_replace('{SCHEMA_NAME}', $schema_table_macro_used, $table_template);
+        fwrite($handle_write, $used_macro."\n");
+    }
+    
+    foreach($this_schema_tables_to_print as $this_schema_table_to_print)
+    {
+        fwrite($handle_write, $this_schema_table_to_print."\n");
+    }
 
     foreach($connectors_to_use as $connector_to_use)
     {
-        fwrite($handle_write, $connector_to_use);
+        fwrite($handle_write, $connector_to_use."\n");
     }
 
     fwrite($handle_write, "}\n");
