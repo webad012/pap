@@ -108,7 +108,7 @@ function create_schema_svg($dbname, $schema, $output_format)
                 $connectors_to_use[] = $line;
             }
             else
-            {
+            {                
                 if($from_is_input_schema)
                 {
                     if(!is_null($to_match))
@@ -141,7 +141,7 @@ function create_schema_svg($dbname, $schema, $output_format)
 
         $previous_line = $line;
     }
-
+    
     $handle_write = fopen($output_file, "w") or die("Unable to open file to write!");
     
     foreach($pre_tables_lines as $pre_tables_line)
@@ -189,9 +189,48 @@ function create_schema_svg($dbname, $schema, $output_format)
     if (!file_exists($output_dir)) {
         mkdir($output_dir, 0777, true);
     }
+    
+    $temp_output_file = $output_dir.'/output_'.$dbname.'_'.$schema.'_temp.'.$output_format;
+    $final_output_file = $output_dir.'/output_'.$dbname.'_'.$schema.'.'.$output_format;
 
-    $svg_command = 'dot -T'.$output_format.' -o '.$output_dir.'/output_'.$dbname.'_'.$schema.'.'.$output_format.' '.$output_file;
-    system($svg_command);
+    $temp_output_command = 'dot -T'.$output_format.' -o '.$temp_output_file.' '.$output_file;
+    system($temp_output_command);
+    
+    if(strtolower($output_format) === 'pdf')
+    {
+        $command_page_size = null;
+        exec('pdfinfo '.$temp_output_file.' | grep \'Page size\'', $command_page_size);
+
+        $to_split = false;
+        $size_x = null;
+        $size_t = null;
+
+        if(!empty($command_page_size))
+        {
+            $page_size = str_replace(['Page size:', 'pts', ' '], ['', '', ''], $command_page_size[0]);
+            $page_sizes = explode('x', $page_size);
+
+            $size_x = round($page_sizes[0]/595.28);
+            $size_y = round($page_sizes[1]/841.89);
+
+            if($size_x > 1 || $size_y > 1)
+            {
+                $to_split = true;
+            }
+        }
+    }
+    
+    if($to_split === true)
+    {
+        $final_output_command = 'mutool poster -x '.$size_x.' -y '.$size_y.' '.$temp_output_file.' '.$final_output_file;
+        system($final_output_command);
+
+        unlink($temp_output_file);
+    }
+    else
+    {
+        rename($temp_output_file, $final_output_file);
+    }
 }
 
 
