@@ -2,9 +2,9 @@
 
 php script that parses postgresql_autodoc output to display image for each requested schema with connections to other schemas
 
-prerequisites: postgresql_autodoc
+prerequisites: postgresql_autodoc, mupdf-tools
 
-tested on: Ubuntu 14.04, php 5.5.9, postgresql 9.3, postgresql_autodoc 1.40, graphviz 2.36
+tested on: Ubuntu 14.04, php 5.5.9, postgresql 9.3, postgresql_autodoc 1.40, graphviz 2.36, mupdf-tools 1.3-2
 
 example usage: 
 ```
