@@ -32,12 +32,11 @@ function create_schema_svg($dbname, $schema, $output_format)
     $previous_line = null;
     
     $pre_tables_lines = [];
-
     $schema_table_macros_used = [];
-
     $this_schema_tables_to_print = [];
     $connectors_to_use = [];
 
+    /// parse file line by line and extract datas
     while (($line = fgets($handle_read)) !== false) 
     {
         if($started_schemas === false)
@@ -142,6 +141,7 @@ function create_schema_svg($dbname, $schema, $output_format)
         $previous_line = $line;
     }
     
+    /// write datas to new dot file
     $handle_write = fopen($output_file, "w") or die("Unable to open file to write!");
     
     foreach($pre_tables_lines as $pre_tables_line)
@@ -185,46 +185,40 @@ function create_schema_svg($dbname, $schema, $output_format)
     fclose($handle_read);
     fclose($handle_write);
     
+    /// verify output dir
     $output_dir = 'output';
     if (!file_exists($output_dir)) {
         mkdir($output_dir, 0777, true);
     }
     
+    /// create output file
+    createOutputFile($output_dir, $dbname, $schema, $output_format, $output_file);
+}
+
+function createOutputFile($output_dir, $dbname, $schema, $output_format, $output_dot_file)
+{
     $temp_output_file = $output_dir.'/output_'.$dbname.'_'.$schema.'_temp.'.$output_format;
     $final_output_file = $output_dir.'/output_'.$dbname.'_'.$schema.'.'.$output_format;
 
-    $temp_output_command = 'dot -T'.$output_format.' -o '.$temp_output_file.' '.$output_file;
+    $temp_output_command = 'dot -T'.$output_format.' -o '.$temp_output_file.' '.$output_dot_file;
     system($temp_output_command);
+    
+    $to_split = false;
+    $size_x = null;
+    $size_y = null;
     
     if(strtolower($output_format) === 'pdf')
     {
-        $command_page_size = null;
-        exec('pdfinfo '.$temp_output_file.' | grep \'Page size\'', $command_page_size);
-
-        $to_split = false;
-        $size_x = null;
-        $size_t = null;
-
-        if(!empty($command_page_size))
-        {
-            $page_size = str_replace(['Page size:', 'pts', ' '], ['', '', ''], $command_page_size[0]);
-            $page_sizes = explode('x', $page_size);
-
-            $size_x = round($page_sizes[0]/595.28);
-            $size_y = round($page_sizes[1]/841.89);
-
-            if($size_x > 1 || $size_y > 1)
-            {
-                $to_split = true;
-            }
-        }
+        $checkIfNeedToSplitPDF = checkIfNeedToSplitPDF($temp_output_file);
+        $to_split = $checkIfNeedToSplitPDF['to_split'];
+        $size_x = $checkIfNeedToSplitPDF['size_x'];
+        $size_y = $checkIfNeedToSplitPDF['size_y'];
     }
     
     if($to_split === true)
     {
         $final_output_command = 'mutool poster -x '.$size_x.' -y '.$size_y.' '.$temp_output_file.' '.$final_output_file;
         system($final_output_command);
-
         unlink($temp_output_file);
     }
     else
@@ -233,6 +227,35 @@ function create_schema_svg($dbname, $schema, $output_format)
     }
 }
 
+function checkIfNeedToSplitPDF($temp_output_file)
+{
+    $command_page_size = null;
+    exec('pdfinfo '.$temp_output_file.' | grep \'Page size\'', $command_page_size);
+
+    $to_split = false;
+    $size_x = null;
+    $size_y = null;
+
+    if(!empty($command_page_size))
+    {
+        $page_size = str_replace(['Page size:', 'pts', ' '], ['', '', ''], $command_page_size[0]);
+        $page_sizes = explode('x', $page_size);
+
+        $size_x = round($page_sizes[0]/595.28);
+        $size_y = round($page_sizes[1]/841.89);
+
+        if($size_x > 1 || $size_y > 1)
+        {
+            $to_split = true;
+        }
+    }
+    
+    return [
+        'to_split' => $to_split,
+        'size_x' => $size_x,
+        'size_y' => $size_y,
+    ];
+}
 
 $host = 'localhost';
 $port = 5432;
